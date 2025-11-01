@@ -24,7 +24,7 @@ This script depends on the following tools:
 sudo apt update
 sudo apt install curl iputils-ping dnsutils
 
-🚀 Quick Start
+#### 🚀 Quick Start
 
 Download the following files:
 
