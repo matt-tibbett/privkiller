@@ -1,0 +1,33 @@
+# Ignore generated reports
+reports/
+*.log
+
+# Ignore temporary directories and files
+tmp/
+*.tmp
+*.swp
+*.bak
+*~
+
+# macOS and Linux temp stuff
+.DS_Store
+.Trash/
+Thumbs.db
+
+# Shell history or environment files
+.bash_history
+.env
+
+# Backup or test artifacts
+test-results/
+*.out
+*.err
+
+# System / editor junk
+.idea/
+.vscode/
+*.code-workspace
+
+# Python virtualenvs (if you later use Python helpers)
+venv/
+.env/
