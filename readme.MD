@@ -12,26 +12,20 @@ sudo apt update
 sudo apt install curl iputils-ping dnsutils
 
 🚀 Quick Start
-
-Download
+1. Download
 
 domain_health_check.sh
 
 domains.txt
 
-Open a terminal in that folder.
-
-Make the script executable
-
+2. Open a terminal in that folder
+3. Make the script executable
 chmod +x domain_health_check.sh
 
-
-Run the script
-
+4. Run the script
 ./domain_health_check.sh domains.txt
 
-
-View reports
+5. View reports
 
 Text reports are saved in the reports/ directory.
 
