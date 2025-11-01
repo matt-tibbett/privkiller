@@ -25,12 +25,10 @@ Open a terminal in that folder.
 Make the script executable
 
 bash
-Copy code
 chmod +x domain_health_check.sh
 Run the script
 
 bash
-Copy code
 ./domain_health_check.sh domains.txt
 View reports
 
