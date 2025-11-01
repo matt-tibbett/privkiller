@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==============================================================
-# DOMAIN HEALTH CHECK SCRIPT (Parallel + Colored Output + HTML)
+# DOMAIN HEALTH CHECK SCRIPT (Parallel + Colored Output + HTML + CSV)
 # --------------------------------------------------------------
 # Checks each domain for DNS, Ping, and HTTP(S) availability.
 # Runs in parallel using xargs.  Saves reports to ./reports.
@@ -15,13 +15,15 @@ RESET="\e[0m"
 
 # --- Usage ---
 if [ -z "$1" ]; then
-  echo "Usage: $0 domain_list.txt [-html]"
+  echo "Usage: $0 domain_list.txt [-html] [-csv]"
   exit 1
 fi
 
 domain_file="$1"
 html_flag=false
-[[ "$2" == "-html" ]] && html_flag=true
+csv_flag=false
+[[ "$2" == "-html" || "$3" == "-html" ]] && html_flag=true
+[[ "$2" == "-csv" || "$3" == "-csv" ]] && csv_flag=true
 parallel_jobs=5   # default concurrency
 
 if [ ! -f "$domain_file" ]; then
@@ -35,6 +37,7 @@ report_dir="reports"
 mkdir -p "$report_dir"
 report_file="${report_dir}/domain_health_report_${timestamp}.txt"
 html_file="${report_dir}/domain_health_report_${timestamp}.html"
+csv_file="${report_dir}/domain_health_report_${timestamp}.csv"
 tmp_dir=$(mktemp -d)
 
 # --- Read and deduplicate domains (safe everywhere) ---
@@ -57,6 +60,7 @@ echo -e "Domains to Check: ${YELLOW}$total${RESET}"
 echo -e "Parallel Jobs: ${YELLOW}$parallel_jobs${RESET}"
 echo -e "Report File: ${YELLOW}$report_file${RESET}"
 $($html_flag && echo -e "HTML Report: ${YELLOW}$html_file${RESET}")
+$($csv_flag && echo -e "CSV Report: ${YELLOW}$csv_file${RESET}")
 echo -e "${BLUE}==============================================================${RESET}\n"
 
 # --- Create worker script for xargs ---
@@ -131,6 +135,7 @@ reachable_count=0
 http_ok_count=0
 passed_html=""
 failed_html=""
+csv_data="Domain,DNS Status,Ping Status,HTTP Status,Resolved IP,Latency,HTTP Code,Redirect Target,SSL (HSTS)\n"
 
 shopt -s nullglob
 tmpfiles=( "$tmp_dir"/*.tmp )
@@ -148,13 +153,19 @@ for f in "${tmpfiles[@]}"; do
   code=$(grep "HTTP Code:" "$f" | awk -F': +' '{print $2}')
   redirect=$(grep "Redirect Target:" "$f" | awk -F': +' '{print $2}')
   ssl=$(grep "SSL (HSTS):" "$f" | awk -F': +' '{print $2}')
+  dns_status=$(grep "DNS Status:" "$f" | awk -F': +' '{print $2}')
+  ping_status=$(grep "Ping Status:" "$f" | awk -F': +' '{print $2}')
+  http_status=$(grep "HTTP Status:" "$f" | awk -F': +' '{print $2}')
 
-  row="<tr><td>$domain</td><td>$ip</td><td>$latency</td><td>$code</td><td>$redirect</td><td>$ssl</td></tr>"
+  row_html="<tr><td>$domain</td><td>$ip</td><td>$latency</td><td>$code</td><td>$redirect</td><td>$ssl</td></tr>"
+  row_csv="\"$domain\",\"$dns_status\",\"$ping_status\",\"$http_status\",\"$ip\",\"$latency\",\"$code\",\"$redirect\",\"$ssl\""
+
+  csv_data+="$row_csv\n"
 
   if $dns_ok && $ping_ok && $http_ok; then
-    passed_html+="$row"
+    passed_html+="$row_html"
   else
-    failed_html+="$row"
+    failed_html+="$row_html"
   fi
 done
 shopt -u nullglob
@@ -211,9 +222,22 @@ if $html_flag; then
   } > "$html_file"
 fi
 
+# --- Build optional CSV report ---
+if $csv_flag; then
+  echo -e "$csv_data" > "$csv_file"
+fi
+
 rm -rf "$tmp_dir"
 
 echo -e "\n${GREEN}✅ Health check complete!${RESET}"
 echo -e "Report saved to: ${YELLOW}$report_file${RESET}"
-$($html_flag && echo -e "HTML report: ${YELLOW}$html_file${RESET}")
+
+if $html_flag; then
+  echo -e "HTML report: ${YELLOW}$html_file${RESET}"
+fi
+
+if $csv_flag; then
+  echo -e "CSV report: ${YELLOW}$csv_file${RESET}"
+fi
+
 echo -e "${BLUE}==============================================================${RESET}"
