@@ -26,3 +26,8 @@ A small Bash script that checks if domains resolve, respond to ping, and serve H
 
 5. **View reports**
    - reports/
+
+6. **Optional html flag**
+   - '-html'
+   - Example './domain_health_check.sh domains.txt -html'
+   provides a copy of the report in html.
