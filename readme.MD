@@ -5,10 +5,10 @@ A small Bash script that checks if domains resolve, respond to ping, and serve H
 ## Requires curl, ping and dig
 
 **Install missing packages on Debian/Ubuntu**
-sudo apt update
-sudo apt install curl
-sudo apt install iputils-ping
-sudo apt install dnsutils
+- sudo apt update
+- sudo apt install curl
+- sudo apt install iputils-ping
+- sudo apt install dnsutils
 
 ### Quick Start
 
@@ -16,13 +16,13 @@ sudo apt install dnsutils
    - `domain_health_check.sh`
    - `domains.txt`
 
-2. **Open a terminal** in that folder.
+2. **Open a terminal in that folder.**
 
 3. **Make the script executable**
-   chmod +x domain_health_check.sh
+   - chmod +x domain_health_check.sh
 
 4. **Run the script**
-   ./domain_health_check.sh
+   - ./domain_health_check.sh
 
 5. **View reports**
-   reports/
+   - reports/
