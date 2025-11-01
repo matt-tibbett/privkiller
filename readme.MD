@@ -1,19 +1,18 @@
-# Domain Health Check
+Domain Health Check
 
-A simple **Bash script** that checks if domains resolve (DNS), respond to ping, and serve HTTP/HTTPS.  
-It runs checks in parallel and saves results to a `reports/` folder.
+A simple Bash script that checks if domains resolve (DNS), respond to ping, and serve HTTP/HTTPS.
+It runs checks in parallel and saves results to a reports/ folder.
 
----
+🧩 Requirements
 
-## 🧩 Requirements
+The script depends on curl, ping, and dig.
 
-The script depends on `curl`, `ping`, and `dig`.
-
-### Install missing packages (Debian/Ubuntu)
-```bash
+Install missing packages (Debian/Ubuntu)
 sudo apt update
 sudo apt install curl iputils-ping dnsutils
+
 🚀 Quick Start
+
 Download
 
 domain_health_check.sh
@@ -24,12 +23,14 @@ Open a terminal in that folder.
 
 Make the script executable
 
-bash
 chmod +x domain_health_check.sh
+
+
 Run the script
 
-bash
 ./domain_health_check.sh domains.txt
+
+
 View reports
 
 Text reports are saved in the reports/ directory.
@@ -38,9 +39,5 @@ Text reports are saved in the reports/ directory.
 Flag	Description
 -html	Generates an additional HTML report with collapsible sections for passed/failed domains.
 -csv	Generates a CSV version of the report for use in spreadsheets.
-
-Example:
-bash
-Copy code
+Example
 ./domain_health_check.sh domains.txt -html -csv
-   
