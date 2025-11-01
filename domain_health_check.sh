@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==============================================================
-# DOMAIN HEALTH CHECK SCRIPT (Parallel + Colored Output)
+# DOMAIN HEALTH CHECK SCRIPT (Parallel + Colored Output + HTML)
 # --------------------------------------------------------------
 # Checks each domain for DNS, Ping, and HTTP(S) availability.
 # Runs in parallel using xargs.  Saves reports to ./reports.
@@ -15,11 +15,13 @@ RESET="\e[0m"
 
 # --- Usage ---
 if [ -z "$1" ]; then
-  echo "Usage: $0 domain_list.txt"
+  echo "Usage: $0 domain_list.txt [-html]"
   exit 1
 fi
 
 domain_file="$1"
+html_flag=false
+[[ "$2" == "-html" ]] && html_flag=true
 parallel_jobs=5   # default concurrency
 
 if [ ! -f "$domain_file" ]; then
@@ -32,6 +34,7 @@ timestamp=$(date +"%Y-%m-%d_%H-%M-%S")
 report_dir="reports"
 mkdir -p "$report_dir"
 report_file="${report_dir}/domain_health_report_${timestamp}.txt"
+html_file="${report_dir}/domain_health_report_${timestamp}.html"
 tmp_dir=$(mktemp -d)
 
 # --- Read and deduplicate domains (safe everywhere) ---
@@ -53,6 +56,7 @@ echo -e "Input File: $domain_file"
 echo -e "Domains to Check: ${YELLOW}$total${RESET}"
 echo -e "Parallel Jobs: ${YELLOW}$parallel_jobs${RESET}"
 echo -e "Report File: ${YELLOW}$report_file${RESET}"
+$($html_flag && echo -e "HTML Report: ${YELLOW}$html_file${RESET}")
 echo -e "${BLUE}==============================================================${RESET}\n"
 
 # --- Create worker script for xargs ---
@@ -125,18 +129,37 @@ fi
 dns_resolved_count=0
 reachable_count=0
 http_ok_count=0
+passed_html=""
+failed_html=""
 
 shopt -s nullglob
 tmpfiles=( "$tmp_dir"/*.tmp )
 for f in "${tmpfiles[@]}"; do
   content=$(<"$f")
-  [[ "$content" =~ "DNS Status:        OK" ]] && ((dns_resolved_count++))
-  [[ "$content" =~ "Ping Status:       OK" ]] && ((reachable_count++))
-  [[ "$content" =~ "HTTP Status:       OK" ]] && ((http_ok_count++))
+  domain=$(grep -Eo "^\[.*\]" "$f" | tr -d '[]')
+  dns_ok=false; ping_ok=false; http_ok=false
+
+  [[ "$content" =~ "DNS Status:        OK" ]] && { ((dns_resolved_count++)); dns_ok=true; }
+  [[ "$content" =~ "Ping Status:       OK" ]] && { ((reachable_count++)); ping_ok=true; }
+  [[ "$content" =~ "HTTP Status:       OK" ]] && { ((http_ok_count++)); http_ok=true; }
+
+  ip=$(grep "Resolved IP:" "$f" | awk -F': +' '{print $2}')
+  latency=$(grep "Latency:" "$f" | awk -F': +' '{print $2}')
+  code=$(grep "HTTP Code:" "$f" | awk -F': +' '{print $2}')
+  redirect=$(grep "Redirect Target:" "$f" | awk -F': +' '{print $2}')
+  ssl=$(grep "SSL (HSTS):" "$f" | awk -F': +' '{print $2}')
+
+  row="<tr><td>$domain</td><td>$ip</td><td>$latency</td><td>$code</td><td>$redirect</td><td>$ssl</td></tr>"
+
+  if $dns_ok && $ping_ok && $http_ok; then
+    passed_html+="$row"
+  else
+    failed_html+="$row"
+  fi
 done
 shopt -u nullglob
 
-# --- Build final report ---
+# --- Build final text report ---
 {
   echo "=============================================================="
   echo "           DOMAIN HEALTH CHECK REPORT"
@@ -165,8 +188,32 @@ else
   echo "No results produced — check network tools or domain list." >> "$report_file"
 fi
 
+# --- Build optional HTML report ---
+if $html_flag; then
+  pass_count=$http_ok_count
+  fail_count=$(( total - pass_count ))
+  success_rate=$(( total > 0 ? (pass_count * 100 / total) : 0 ))
+
+  {
+    echo "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Domain Health Report</title>"
+    echo "<style>body{font-family:Arial,sans-serif;background:#fafafa;color:#333;padding:20px;}h1{color:#444;}details{margin-bottom:20px;}summary{font-size:1.2em;cursor:pointer;margin-top:10px;}table{border-collapse:collapse;width:100%;margin:10px 0;}th,td{border:1px solid #ccc;padding:8px;text-align:left;}th{background:#eee;}</style>"
+    echo "</head><body><h1>Domain Health Report</h1>"
+    echo "<p><strong>Date:</strong> $(date)</p>"
+    echo "<p><strong>Total Domains:</strong> $total<br>"
+    echo "<strong>Passed:</strong> $pass_count<br>"
+    echo "<strong>Failed:</strong> $fail_count<br>"
+    echo "<strong>Success Rate:</strong> ${success_rate}%</p><hr>"
+    echo "<details open><summary>✅ Passed Domains ($pass_count)</summary>"
+    echo "<table><tr><th>Domain</th><th>IP</th><th>Latency</th><th>HTTP Code</th><th>Redirect</th><th>SSL</th></tr>$passed_html</table></details>"
+    echo "<details><summary>❌ Failed Domains ($fail_count)</summary>"
+    echo "<table><tr><th>Domain</th><th>IP</th><th>Latency</th><th>HTTP Code</th><th>Redirect</th><th>SSL</th></tr>$failed_html</table></details>"
+    echo "</body></html>"
+  } > "$html_file"
+fi
+
 rm -rf "$tmp_dir"
 
 echo -e "\n${GREEN}✅ Health check complete!${RESET}"
 echo -e "Report saved to: ${YELLOW}$report_file${RESET}"
+$($html_flag && echo -e "HTML report: ${YELLOW}$html_file${RESET}")
 echo -e "${BLUE}==============================================================${RESET}"
