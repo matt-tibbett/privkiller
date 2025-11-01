@@ -22,7 +22,7 @@ A small Bash script that checks if domains resolve, respond to ping, and serve H
    - chmod +x domain_health_check.sh
 
 4. **Run the script**
-   - ./domain_health_check.sh
+   - ./domain_health_check.sh domains.txt
 
 5. **View reports**
    - reports/
